@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFP商談支援金シミュレーター v2</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 650px;
+        }
+        h1 {
+            font-size: 1.4rem;
+            color: #1a202c;
+            margin-bottom: 25px;
+            text-align: center;
+            border-left: 5px solid #3182ce;
+            padding-left: 15px;
+        }
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #4a5568;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: #fff;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        select:focus {
+            outline: none;
+            border-color: #3182ce;
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .card {
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #f8fafc;
+            border: 1px solid #edf2f7;
+        }
+        .card-title {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+        .card-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        .main-result {
+            grid-column: span 2;
+            background-color: #ebf8ff;
+            border: 2px solid #bee3f8;
+            text-align: center;
+            padding: 20px;
+        }
+        .main-result .card-value {
+            font-size: 2.2rem;
+            color: #2b6cb0;
+        }
+        .support-value {
+            color: #38a169; /* Green for bonus */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>MFP商談支援金・実質金額シミュレーター</h1>
+    
+    <div class="input-section">
+        <div class="form-group">
+            <label for="modelSelect">① 機種を選択</label>
+            <select id="modelSelect">
+                <option value="">-- 機種名を選択 --</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="caseSelect">② 商談ケースを選択</label>
+            <select id="caseSelect">
+                <option value="CtoC ロイヤルMIF (100名未満)">CtoC ロイヤルMIF (100名未満)</option>
+                <option value="CtoC ロイヤルMIF (100名以上/官公庁)">CtoC ロイヤルMIF (100名以上/官公庁)</option>
+                <option value="CtoC 非ロイヤルMIF (100名未満)">CtoC 非ロイヤルMIF (100名未満)</option>
+                <option value="CtoC 非ロイヤルMIF (100名以上/官公庁)">CtoC 非ロイヤルMIF (100名以上/官公庁)</option>
+                <option value="新規・増設・OEA (30名未満)">新規・増設・OEA (30名未満)</option>
+                <option value="新規・増設・OEA (30～99名)">新規・増設・OEA (30～99名)</option>
+                <option value="新規・増設・OEA (100名以上)">新規・増設・OEA (100名以上)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="result-grid">
+        <div class="card">
+            <div class="card-title">定価</div>
+            <div id="listPrice" class="card-value">-</div>
+        </div>
+        <div class="card">
+            <div class="card-title">仕切価格</div>
+            <div id="wholesalePrice" class="card-value">-</div>
+        </div>
+        <div class="card">
+            <div class="card-title">支援金額</div>
+            <div id="supportAmount" class="card-value support-value">-</div>
+        </div>
+        <div class="card main-result">
+            <div class="card-title">実質金額 (仕切 - 支援金)</div>
+            <div id="netPrice" class="card-value">-</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // CSVから抽出したデータ
+    const data = [
+  {
+    "name": "iR C3322F",
+    "listPrice": "オープン",
+    "wholesalePrice": 334740,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 15000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 45000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 30000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 50000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 4925F",
+    "listPrice": "1460000",
+    "wholesalePrice": 447300,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 20000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 60000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 40000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 60000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 4935F",
+    "listPrice": "1850000",
+    "wholesalePrice": 588000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 30000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 90000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 60000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 80000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 4945F",
+    "listPrice": "2080000",
+    "wholesalePrice": 684180,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 75000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 225000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 150000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 170000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 6860",
+    "listPrice": "3120000",
+    "wholesalePrice": 1004100,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 125000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 375000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 250000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 270000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 6870",
+    "listPrice": "3490000",
+    "wholesalePrice": 1157100,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 6780",
+    "listPrice": "4300000",
+    "wholesalePrice": 1395300,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C3926F",
+    "listPrice": "2050000",
+    "wholesalePrice": 627900,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 60000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 180000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 120000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 140000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C3930F",
+    "listPrice": "2350000",
+    "wholesalePrice": 716100,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 75000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 225000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 150000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 170000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C3935F",
+    "listPrice": "2700000",
+    "wholesalePrice": 826200,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 100000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 300000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 200000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 220000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C5840F",
+    "listPrice": "3150000",
+    "wholesalePrice": 967560,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 125000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 375000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 250000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 270000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C5850F",
+    "listPrice": "3700000",
+    "wholesalePrice": 1133460,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C5860F",
+    "listPrice": "4250000",
+    "wholesalePrice": 1301580,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 175000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 525000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 350000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 370000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C5870F",
+    "listPrice": "5000000",
+    "wholesalePrice": 1530900,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 200000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 600000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 400000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 420000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C7765",
+    "listPrice": "4800000",
+    "wholesalePrice": 1600200,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C7770",
+    "listPrice": "5300000",
+    "wholesalePrice": 1774500,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 175000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 525000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 350000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 370000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX C7780",
+    "listPrice": "6000000",
+    "wholesalePrice": 2028600,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 200000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 600000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 400000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 420000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 8786",
+    "listPrice": "4000000",
+    "wholesalePrice": 1293600,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 8795",
+    "listPrice": "4600000",
+    "wholesalePrice": 1493100,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 175000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 525000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 350000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 370000
+    }
+  },
+  {
+    "name": "iR ADVANCE DX 8705",
+    "listPrice": "5100000",
+    "wholesalePrice": 1656900,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 200000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 600000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 400000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 420000
+    }
+  },
+  {
+    "name": "imageRUNNER C3320F",
+    "listPrice": "オープン",
+    "wholesalePrice": 334740,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 15000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 45000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 30000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 50000
+    }
+  },
+  {
+    "name": "imagePRESS V1000",
+    "listPrice": "14000000",
+    "wholesalePrice": 5355000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 200000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 600000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 400000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 420000
+    }
+  },
+  {
+    "name": "imagePRESS V1350",
+    "listPrice": "24000000",
+    "wholesalePrice": 9072000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 300000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 900000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 600000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 620000
+    }
+  },
+  {
+    "name": "imagePRESS V700",
+    "listPrice": "4000000",
+    "wholesalePrice": 1512000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "imagePRESS V800",
+    "listPrice": "5500000",
+    "wholesalePrice": 2058000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "imagePRESS V900",
+    "listPrice": "7500000",
+    "wholesalePrice": 2772000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "imagePRESS C265",
+    "listPrice": "3400000",
+    "wholesalePrice": 1285200,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 125000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 375000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 250000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 270000
+    }
+  },
+  {
+    "name": "imagePRESS C270",
+    "listPrice": "4000000",
+    "wholesalePrice": 1512000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "imageFORCE 8186",
+    "listPrice": "4500000",
+    "wholesalePrice": 1722000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "imageFORCE 8186P",
+    "listPrice": "4000000",
+    "wholesalePrice": 1512000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 150000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 450000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 300000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 320000
+    }
+  },
+  {
+    "name": "imageFORCE 8195",
+    "listPrice": "5500000",
+    "wholesalePrice": 2058000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 200000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 600000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 400000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 420000
+    }
+  },
+  {
+    "name": "imageFORCE 8105",
+    "listPrice": "7000000",
+    "wholesalePrice": 2604000,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 250000,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 750000,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 500000,
+      "新規・増設・OEA (30名未満)": 20000,
+      "新規・増設・OEA (30～99名)": 40000,
+      "新規・増設・OEA (100名以上)": 520000
+    }
+  },
+  {
+    "name": "iR 1643iF / 1643i",
+    "listPrice": "238000",
+    "wholesalePrice": 121380,
+    "cases": {
+      "CtoC ロイヤルMIF (100名未満)": 0,
+      "CtoC ロイヤルMIF (100名以上/官公庁)": 0,
+      "CtoC 非ロイヤルMIF (100名未満)": 0,
+      "CtoC 非ロイヤルMIF (100名以上/官公庁)": 0,
+      "新規・増設・OEA (30名未満)": 0,
+      "新規・増設・OEA (30～99名)": 0,
+      "新規・増設・OEA (100名以上)": 0
+    }
+  }
+];
+
+    const modelSelect = document.getElementById('modelSelect');
+    const caseSelect = document.getElementById('caseSelect');
+    
+    const listPriceDisp = document.getElementById('listPrice');
+    const wholesalePriceDisp = document.getElementById('wholesalePrice');
+    const supportAmountDisp = document.getElementById('supportAmount');
+    const netPriceDisp = document.getElementById('netPrice');
+
+    // 通貨フォーマット関数
+    function formatYen(val) {
+        if (typeof val === 'string' && val === 'オープン') return 'オープン価格';
+        if (isNaN(val)) return '-';
+        return '¥ ' + Number(val).toLocaleString();
+    }
+
+    // モデル一覧をプルダウンに追加
+    data.forEach((item, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = item.name;
+        modelSelect.appendChild(option);
+    });
+
+    // 計算処理
+    function updateValues() {
+        const idx = modelSelect.value;
+        const caseKey = caseSelect.value;
+
+        if (idx === "") {
+            listPriceDisp.textContent = "-";
+            wholesalePriceDisp.textContent = "-";
+            supportAmountDisp.textContent = "-";
+            netPriceDisp.textContent = "-";
+            return;
+        }
+
+        const model = data[idx];
+        const wholesale = model.wholesalePrice;
+        const support = model.cases[caseKey] || 0;
+        const net = wholesale - support;
+
+        listPriceDisp.textContent = formatYen(model.listPrice);
+        wholesalePriceDisp.textContent = formatYen(wholesale);
+        supportAmountDisp.textContent = formatYen(support);
+        netPriceDisp.textContent = formatYen(net);
+    }
+
+    // イベントリスナー
+    modelSelect.addEventListener('change', updateValues);
+    caseSelect.addEventListener('change', updateValues);
+</script>
+
+</body>
+</html>
